@@ -10,19 +10,22 @@
 #import "FBElementCommands.h"
 
 #import "FBApplication.h"
+#import "FBKeyboard.h"
 #import "FBRoute.h"
 #import "FBRouteRequest.h"
 #import "FBRunLoopSpinner.h"
 #import "FBElementCache.h"
+#import "FBErrorBuilder.h"
 #import "FBSession.h"
-#import "XCTestDriver.h"
 #import "FBApplication.h"
 #import "XCUICoordinate.h"
 #import "XCUIDevice.h"
 #import "XCUIElement+FBIsVisible.h"
 #import "XCUIElement+FBScrolling.h"
 #import "XCUIElement+FBTap.h"
+#import "XCUIElement+Utilities.h"
 #import "XCUIElement+WebDriverAttributes.h"
+#import "FBElementTypeTransformer.h"
 #import "XCUIElement.h"
 #import "XCUIElementQuery.h"
 
@@ -99,7 +102,7 @@
   FBElementCache *elementCache = request.session.elementCache;
   XCUIElement *element = [elementCache elementForIndex:[request.parameters[@"id"] integerValue]];
   NSError *error;
-  if ([element scrollToVisibleWithError:&error]) {
+  if ([element fb_scrollToVisibleWithError:&error]) {
     return FBResponseWithStatus(FBCommandStatusNoError, element.wdLocation);
   }
   return FBResponseWithError(error);
@@ -110,7 +113,7 @@
   FBElementCache *elementCache = request.session.elementCache;
   NSInteger elementID = [request.parameters[@"id"] integerValue];
   XCUIElement *element = [elementCache elementForIndex:elementID];
-  id attributeValue = [element valueForWDAttributeName:request.parameters[@"name"]];
+  id attributeValue = [element fb_valueForWDAttributeName:request.parameters[@"name"]];
   attributeValue = attributeValue ?: [NSNull null];
   return FBResponseWithStatus(FBCommandStatusNoError, attributeValue);
 }
@@ -166,7 +169,7 @@
     return FBResponseWithError(error);
   }
   NSString *textToType = [request.arguments[@"value"] componentsJoinedByString:@""];
-  if (![self.class typeText:textToType error:&error]) {
+  if (![FBKeyboard typeText:textToType error:&error]) {
     return FBResponseWithError(error);
   }
   return FBResponseWithElementID(elementID);
@@ -178,6 +181,11 @@
   NSInteger elementID = [request.parameters[@"id"] integerValue];
   XCUIElement *element = [elementCache elementForIndex:elementID];
   NSError *error = nil;
+  if (!element.fb_isVisible) {
+    if (![element fb_scrollToVisibleWithError:&error]) {
+      return FBResponseWithError(error);
+    }
+  }
   if (![element fb_tapWithError:&error]) {
     return FBResponseWithError(error);
   }
@@ -197,7 +205,7 @@
   for (NSUInteger i = 0 ; i < [element.value length] ; i++) {
     [textToType appendString:@"\b"];
   }
-  if (![self.class typeText:textToType error:&error]) {
+  if (![FBKeyboard typeText:textToType error:&error]) {
     return FBResponseWithError(error);
   }
   return FBResponseWithElementID(elementID);
@@ -215,7 +223,7 @@
 {
   FBElementCache *elementCache = request.session.elementCache;
   XCUIElement *element = [elementCache elementForIndex:[request.parameters[@"id"] integerValue]];
-  [element pressForDuration:[request.arguments[@"duration"] floatValue]];
+  [element pressForDuration:[request.arguments[@"duration"] doubleValue]];
   return FBResponseWithOK();
 }
 
@@ -236,13 +244,13 @@
   NSString *const direction = request.arguments[@"direction"];
   if (direction) {
     if ([direction isEqualToString:@"up"]) {
-      [element scrollUp];
+      [element fb_scrollUp];
     } else if ([direction isEqualToString:@"down"]) {
-      [element scrollDown];
+      [element fb_scrollDown];
     } else if ([direction isEqualToString:@"left"]) {
-      [element scrollLeft];
+      [element fb_scrollLeft];
     } else if ([direction isEqualToString:@"right"]) {
-      [element scrollRight];
+      [element fb_scrollRight];
     }
     return FBResponseWithOK();
   }
@@ -257,27 +265,33 @@
   if (request.arguments[@"toVisible"]) {
     return [self.class handleScrollElementToVisible:element withRequest:request];
   }
-  return FBResponseWithErrorMessage(@"Unsupported scroll type");
+  return FBResponseWithErrorFormat(@"Unsupported scroll type");
 }
 
 + (id<FBResponsePayload>)handleGetUIAElementValue:(FBRouteRequest *)request
 {
-  FBElementCache *elementCache = request.session.elementCache;
-  XCUIElement *element = [elementCache elementForIndex:[request.parameters[@"id"] integerValue]];
-  NSString *value = request.arguments[@"value"];
-  if (!value) {
-    return FBResponseWithErrorMessage(@"Missing value parameter");
-  }
-  [element adjustToPickerWheelValue:value];
-  return FBResponseWithOK();
+    FBElementCache *elementCache = request.session.elementCache;
+    XCUIElement *element = [elementCache elementForIndex:[request.parameters[@"id"] integerValue]];
+    if (element.elementType != XCUIElementTypePickerWheel) {
+        return FBResponseWithErrorFormat(@"Element is not of type %@", [FBElementTypeTransformer shortStringWithElementType:XCUIElementTypePickerWheel]);
+    }
+    NSString *wheelPickerValue = request.arguments[@"value"];
+    
+    if (!wheelPickerValue) {
+        return FBResponseWithErrorFormat(@"Missing value parameter");
+    }
+    
+    [element adjustToPickerWheelValue:wheelPickerValue];
+    return FBResponseWithOK();
+    
 }
 
 + (id<FBResponsePayload>)handleDrag:(FBRouteRequest *)request
 {
   FBSession *session = request.session;
-  CGVector startPoint = CGVectorMake([request.arguments[@"fromX"] floatValue], [request.arguments[@"fromY"] floatValue]);
-  CGVector endPoint = CGVectorMake([request.arguments[@"toX"] floatValue], [request.arguments[@"toY"] floatValue]);
-  CGFloat duration = [request.arguments[@"duration"] floatValue];
+  CGVector startPoint = CGVectorMake((CGFloat)[request.arguments[@"fromX"] doubleValue], (CGFloat)[request.arguments[@"fromY"] doubleValue]);
+  CGVector endPoint = CGVectorMake((CGFloat)[request.arguments[@"toX"] doubleValue], (CGFloat)[request.arguments[@"toY"] doubleValue]);
+  NSTimeInterval duration = [request.arguments[@"duration"] doubleValue];
   XCUICoordinate *appCoordinate = [[XCUICoordinate alloc] initWithElement:session.application normalizedOffset:CGVectorMake(0, 0)];
   XCUICoordinate *endCoordinate = [[XCUICoordinate alloc] initWithCoordinate:appCoordinate pointsOffset:endPoint];
   XCUICoordinate *startCoordinate = [[XCUICoordinate alloc] initWithCoordinate:appCoordinate pointsOffset:startPoint];
@@ -289,8 +303,8 @@
 {
   FBElementCache *elementCache = request.session.elementCache;
   FBSession *session = request.session;
-  CGFloat x = [request.arguments[@"x"] floatValue];
-  CGFloat y = [request.arguments[@"y"] floatValue];
+  CGFloat x = (CGFloat)[request.arguments[@"x"] doubleValue];
+  CGFloat y = (CGFloat)[request.arguments[@"y"] doubleValue];
   NSInteger elementID = [request.parameters[@"id"] integerValue];
   XCUIElement *element = [elementCache elementForIndex:elementID];
   if (element != nil) {
@@ -308,7 +322,7 @@
 {
   NSString *textToType = [request.arguments[@"value"] componentsJoinedByString:@""];
   NSError *error;
-  if (![self.class typeText:textToType error:&error]) {
+  if (![FBKeyboard typeText:textToType error:&error]) {
     return FBResponseWithError(error);
   }
   return FBResponseWithOK();
@@ -323,38 +337,16 @@
 
 #pragma mark - Helpers
 
-/*!
- * Types a string into the element. The element or a descendant must have keyboard focus; otherwise an
- * error is raised.
- *
- * This API discards any modifiers set in the current context by +performWithKeyModifiers:block: so that
- * it strictly interprets the provided text. To input keys with modifier flags, use  -typeKey:modifierFlags:.
- */
-+ (BOOL)typeText:(NSString *)text error:(NSError **)error
-{
-  __block BOOL didSucceed = NO;
-  __block NSError *innerError;
-  [FBRunLoopSpinner spinUntilCompletion:^(void(^completion)()){
-    [[XCTestDriver sharedTestDriver].managerProxy _XCT_sendString:text completion:^(NSError *typingError){
-      didSucceed = (typingError == nil);
-      innerError = typingError;
-      completion();
-    }];
-  }];
-  if (error) {
-    *error = innerError;
-  }
-  return didSucceed;
-}
-
 + (id<FBResponsePayload>)handleScrollElementToVisible:(XCUIElement *)element withRequest:(FBRouteRequest *)request
 {
   NSError *error;
-  if ([element scrollToVisibleWithError:&error]) {
-    return FBResponseWithOK();
-  } else {
+  if (!element.exists) {
+    return FBResponseWithErrorFormat(@"Can't scroll to element that does not exist");
+  }
+  if (![element fb_scrollToVisibleWithError:&error]) {
     return FBResponseWithError(error);
   }
+  return FBResponseWithOK();
 }
 
 @end

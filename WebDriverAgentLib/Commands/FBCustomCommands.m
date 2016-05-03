@@ -12,6 +12,7 @@
 #import <XCTest/XCUIDevice.h>
 
 #import "FBApplication.h"
+#import "FBKeyboard.h"
 #import "FBResponsePayload.h"
 #import "FBRoute.h"
 #import "FBRouteRequest.h"
@@ -20,7 +21,7 @@
 #import "XCUIElement.h"
 #import "XCUIElementQuery.h"
 
-static const CGFloat FBHomeButtonCoolOffTime = 1.;
+static const NSTimeInterval FBHomeButtonCoolOffTime = 1.;
 
 @implementation FBCustomCommands
 
@@ -30,7 +31,9 @@ static const CGFloat FBHomeButtonCoolOffTime = 1.;
   @[
     [[FBRoute POST:@"/homescreen"].withoutSession respondWithTarget:self action:@selector(handleHomescreenCommand:)],
     [[FBRoute POST:@"/deactivateApp"] respondWithTarget:self action:@selector(handleDeactivateAppCommand:)],
-    [[FBRoute POST:@"/timeouts/implicit_wait"] respondWithTarget:self action:@selector(handleImplicitWaitCommand:)],
+    //TODO: Remove once clients have been migrated.
+    [[FBRoute POST:@"/timeouts/implicit_wait"] respondWithTarget:self action:@selector(handleTimeouts:)],
+    [[FBRoute POST:@"/timeouts"] respondWithTarget:self action:@selector(handleTimeouts:)],
     [[FBRoute POST:@"/hide_keyboard"] respondWithTarget:self action:@selector(handleHideKeyboard:)]
   ];
 }
@@ -48,7 +51,7 @@ static const CGFloat FBHomeButtonCoolOffTime = 1.;
   // Causing waitUntilApplicationBoardIsVisible not to work properly in some edge cases e.g. like starting session right after this call, while being on home screen
   [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:FBHomeButtonCoolOffTime]];
   NSError *error;
-  if (![[FBSpringboardApplication springboard] waitUntilApplicationBoardIsVisible:&error]) {
+  if (![[FBSpringboardApplication fb_springboard] fb_waitUntilApplicationBoardIsVisible:&error]) {
     return FBResponseWithError(error);
   }
   return FBResponseWithOK();
@@ -61,17 +64,17 @@ static const CGFloat FBHomeButtonCoolOffTime = 1.;
   [[XCUIDevice sharedDevice] pressButton:XCUIDeviceButtonHome];
 
   NSNumber *requestedDuration = request.arguments[@"duration"];
-  CGFloat duration = (requestedDuration ? requestedDuration.floatValue : 3.f);
+  NSTimeInterval duration = (requestedDuration ? requestedDuration.doubleValue : 3.);
   [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:duration]];
 
   NSError *error;
-  if (![[FBSpringboardApplication springboard] fb_tapApplicationWithIdentifier:applicationIdentifier error:&error]) {
+  if (![[FBSpringboardApplication fb_springboard] fb_tapApplicationWithIdentifier:applicationIdentifier error:&error]) {
     return FBResponseWithError(error);
   }
   return FBResponseWithOK();
 }
 
-+ (id<FBResponsePayload>)handleImplicitWaitCommand:(FBRouteRequest *)request
++ (id<FBResponsePayload>)handleTimeouts:(FBRouteRequest *)request
 {
   // This method is intentionally not supported.
   return FBResponseWithOK();
@@ -79,17 +82,11 @@ static const CGFloat FBHomeButtonCoolOffTime = 1.;
 
 + (id<FBResponsePayload>)handleHideKeyboard:(FBRouteRequest *)request
 {
-    FBSession *session = request.session;
-    XCUIElement *element = [session.application.windows elementBoundByIndex:0];
-    XCUIElementQuery *allElements = [element descendantsMatchingType:XCUIElementTypeAny];
-    XCUIElement *activeElement = [allElements elementMatchingPredicate:[NSPredicate predicateWithFormat:@"hasKeyboardFocus == YES"]];
-    if ([activeElement exists]) {
-        [element tap];
-        return FBResponseWithOK();
-    } else {
-        return FBResponseWithStatus(FBCommandStatusInvalidElementState, nil);
-    }
-
+  NSError *error;
+  if (![FBKeyboard hideWithError:&error]) {
+    return FBResponseWithError(error);
+  }
+  return FBResponseWithOK();
 }
 
 @end
