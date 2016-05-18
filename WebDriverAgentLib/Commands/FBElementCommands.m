@@ -181,6 +181,11 @@
   NSInteger elementID = [request.parameters[@"id"] integerValue];
   XCUIElement *element = [elementCache elementForIndex:elementID];
   NSError *error = nil;
+  if (!element.fb_isVisible) {
+    if (![element fb_scrollToVisibleWithError:&error]) {
+      return FBResponseWithError(error);
+    }
+  }
   if (![element fb_tapWithError:&error]) {
     return FBResponseWithError(error);
   }
