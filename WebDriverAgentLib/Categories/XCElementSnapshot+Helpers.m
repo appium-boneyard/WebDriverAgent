@@ -9,49 +9,17 @@
 
 #import "XCElementSnapshot+Helpers.h"
 
-#import "WebDriverAgentLib/FBFindElementCommands.h"
-
+#import "FBFindElementCommands.h"
 #import "FBRunLoopSpinner.h"
-#import "FBWDALogger.h"
+#import "FBLogger.h"
 #import "FBXPathCreator.h"
 #import "XCAXClient_iOS.h"
 #import "XCTestDriver.h"
+#import "XCTestPrivateSymbols.h"
 
 inline static BOOL valuesAreEqual(id value1, id value2);
 
-extern const NSString *const XC_kAXXCAttributeIsVisible;
-extern const NSString *const XC_kAXXCAttributeIsElement;
-NSArray *XCAXAccessibilityAttributesForStringAttributes(NSArray *list);
-
-NSNumber *FB_XCAXAIsVisibleAttribute;
-NSNumber *FB_XCAXAIsElementAttribute;
-
 @implementation XCElementSnapshot (Helpers)
-
-+ (void)load
-{
-  NSArray<NSNumber *> *accessibilityAttributes = XCAXAccessibilityAttributesForStringAttributes(@[XC_kAXXCAttributeIsVisible, XC_kAXXCAttributeIsElement]);
-  FB_XCAXAIsVisibleAttribute = accessibilityAttributes[0];
-  FB_XCAXAIsElementAttribute = accessibilityAttributes[1];
-}
-
-+ (XCElementSnapshot *)fb_snapshotForAccessibilityElement:(XCAccessibilityElement *)accessibilityElement
-{
-  __block XCElementSnapshot *snapshot;
-  [FBRunLoopSpinner spinUntilCompletion:^(void(^completion)()){
-    [[XCTestDriver sharedTestDriver].managerProxy _XCT_snapshotForElement:accessibilityElement
-                                                               attributes:[[XCAXClient_iOS sharedClient] defaultAttributes]
-                                                               parameters: [[XCAXClient_iOS sharedClient] defaultParameters]
-                                                                    reply:^(XCElementSnapshot *iSnapshot, NSError *error) {
-                                                                      if (error) {
-                                                                        [FBWDALogger logFmt:@"Error: %@", error];
-                                                                      }
-                                                                      snapshot = iSnapshot;
-                                                                      completion();
-                                                                    }];
-  }];
-  return snapshot;
-}
 
 - (NSArray<XCElementSnapshot *> *)fb_descendantsMatchingType:(XCUIElementType)type
 {

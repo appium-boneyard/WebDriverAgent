@@ -16,107 +16,60 @@
 
 #import "XCUIElement+WebDriverAttributes.h"
 
-inline static NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, NSInteger elementID);
+inline static NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, NSString *elementUUID);
+
+id<FBResponsePayload> FBResponseWithOK()
+{
+  return FBResponseWithStatus(FBCommandStatusNoError, nil);
+}
+
+id<FBResponsePayload> FBResponseWithObject(id object)
+{
+  return FBResponseWithStatus(FBCommandStatusNoError, object);
+}
 
 id<FBResponsePayload> FBResponseWithCachedElement(XCUIElement *element, FBElementCache *elementCache)
 {
-  NSInteger elementID = [elementCache storeElement:element];
-  return FBResponseWithStatus(FBCommandStatusNoError, FBDictionaryResponseWithElement(element, elementID));
+  NSString *elementUUID = [elementCache storeElement:element];
+  return FBResponseWithStatus(FBCommandStatusNoError, FBDictionaryResponseWithElement(element, elementUUID));
 }
 
 id<FBResponsePayload> FBResponseWithCachedElements(NSArray<XCUIElement *> *elements, FBElementCache *elementCache)
 {
   NSMutableArray *elementsResponse = [NSMutableArray array];
   for (XCUIElement *element in elements) {
-    NSInteger elementID = [elementCache storeElement:element];
-    [elementsResponse addObject:FBDictionaryResponseWithElement(element, elementID)];
+    NSString *elementUUID = [elementCache storeElement:element];
+    [elementsResponse addObject:FBDictionaryResponseWithElement(element, elementUUID)];
   }
   return FBResponseWithStatus(FBCommandStatusNoError, elementsResponse);
 }
 
-id<FBResponsePayload> FBResponseWithElementID(NSUInteger elementID)
-{
-  return [FBResponsePayload withElementID:elementID];
-}
-
-id<FBResponsePayload> FBResponseWithError(NSError *error)
-{
-  return [FBResponsePayload withError:error];
-}
-
-id<FBResponsePayload> FBResponseWithErrorFormat(NSString *format, ...)
-{
-  va_list argList;
-  va_start(argList, format);
-  id<FBResponsePayload> payload = [FBResponsePayload withErrorFormat:format arguments:argList];
-  va_end(argList);
-  return payload;
-}
-
-id<FBResponsePayload> FBResponseWithStatus(FBCommandStatus status, id object)
-{
-  return [FBResponsePayload withStatus:status object:object];
-}
-
-id<FBResponsePayload> FBResponseWithOK(void)
-{
-  return FBResponsePayload.ok;
-}
-
-id<FBResponsePayload> FBResponseFileWithPath(NSString *path)
-{
-  return [FBResponsePayload withFileAtPath:path];
-}
-
-@implementation FBResponsePayload
-
-+ (id<FBResponsePayload>)ok
-{
-  return [self withStatus:FBCommandStatusNoError object:nil];
-}
-
-+ (id<FBResponsePayload>)okWith:(id)object
-{
-  return [self withStatus:FBCommandStatusNoError object:object];
-}
-
-+ (id<FBResponsePayload>)withElementID:(NSUInteger)elementID
+id<FBResponsePayload> FBResponseWithElementUUID(NSString *elementUUID)
 {
   return [[FBResponseJSONPayload alloc] initWithDictionary:@{
-    @"id" : @(elementID),
+    @"id" : elementUUID,
     @"sessionId" : [FBSession activeSession].identifier ?: NSNull.null,
     @"value" : @"",
     @"status" : @0,
   }];
 }
 
-+ (id<FBResponsePayload>)withError:(NSError *)error
+id<FBResponsePayload> FBResponseWithError(NSError *error)
 {
-  return [self withStatus:FBCommandStatusUnhandled object:error.description];
+  return FBResponseWithStatus(FBCommandStatusUnhandled, error.description);
 }
 
-+ (id<FBResponsePayload>)withErrorFormat:(NSString *)format, ... NS_FORMAT_FUNCTION(1,2)
+id<FBResponsePayload> FBResponseWithErrorFormat(NSString *format, ...)
 {
   va_list argList;
   va_start(argList, format);
-  id<FBResponsePayload> payload = [self withErrorFormat:format arguments:argList];
-  NSLogv(format, argList);
+  NSString *errorMessage = [[NSString alloc] initWithFormat:format arguments:argList];
+  id<FBResponsePayload> payload = FBResponseWithStatus(FBCommandStatusUnhandled, errorMessage);
   va_end(argList);
   return payload;
 }
 
-+ (id<FBResponsePayload>)withErrorFormat:(NSString *)format arguments:(va_list)argList NS_FORMAT_FUNCTION(1,0)
-{
-  NSString *errorMessage = [[NSString alloc] initWithFormat:format arguments:argList];
-  return [self withStatus:FBCommandStatusUnhandled object:errorMessage];
-}
-
-+ (id<FBResponsePayload>)withStatus:(FBCommandStatus)status
-{
-  return [self withStatus:status object:nil];
-}
-
-+ (id<FBResponsePayload>)withStatus:(FBCommandStatus)status object:(id)object
+id<FBResponsePayload> FBResponseWithStatus(FBCommandStatus status, id object)
 {
   return [[FBResponseJSONPayload alloc] initWithDictionary:@{
     @"value" : object ?: @{},
@@ -125,18 +78,16 @@ id<FBResponsePayload> FBResponseFileWithPath(NSString *path)
   }];
 }
 
-+ (id<FBResponsePayload>)withFileAtPath:(NSString *)path
+id<FBResponsePayload> FBResponseFileWithPath(NSString *path)
 {
   return [[FBResponseFilePayload alloc] initWithFilePath:path];
 }
 
-@end
-
-inline static NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, NSInteger elementID)
+inline static NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, NSString *elementUUID)
 {
   return
   @{
-    @"ELEMENT": @(elementID),
+    @"ELEMENT": elementUUID,
     @"type": element.wdType,
     @"label" : element.wdLabel ?: [NSNull null],
     };

@@ -10,12 +10,9 @@
 #import "FBDebugCommands.h"
 
 #import "FBApplication.h"
-#import "FBElementTypeTransformer.h"
 #import "FBRouteRequest.h"
 #import "FBSession.h"
-#import "FBWDAMacros.h"
-#import "XCUIElement+FBIsVisible.h"
-#import "XCUIElement+WebDriverAttributes.h"
+#import "XCUIApplication+FBHelpers.h"
 
 @implementation FBDebugCommands
 
@@ -25,65 +22,22 @@
 {
   return
   @[
-    [[FBRoute GET:@"/source"] respondWithTarget:self action:@selector(handleGetTreeCommand:)],
-    [[FBRoute GET:@"/source"].withoutSession respondWithTarget:self action:@selector(handleGetActiveTreeCommand:)],
+    [[FBRoute POST:@"/source"] respondWithTarget:self action:@selector(handleGetTreeCommand:)],
+    [[FBRoute POST:@"/source"].withoutSession respondWithTarget:self action:@selector(handleGetTreeCommand:)],
   ];
 }
 
 
 #pragma mark - Commands
 
-+ (id<FBResponsePayload>)handleGetActiveTreeCommand:(FBRouteRequest *)request
++ (id<FBResponsePayload>)handleGetTreeCommand:(FBRouteRequest *)request
 {
-  FBApplication *application = [FBApplication fb_activeApplication];
+  FBApplication *application = request.session.application ?: [FBApplication fb_activeApplication];
   if (!application) {
     return FBResponseWithErrorFormat(@"There is no active application");
   }
-  return [self handleTreeCommandWithParams:application];
-}
-
-+ (id<FBResponsePayload>)handleGetTreeCommand:(FBRouteRequest *)request
-{
-  FBSession *session = request.session;
-  return [self handleTreeCommandWithParams:session.application];
-}
-
-
-#pragma mark - Helpers
-
-+ (id<FBResponsePayload>)handleTreeCommandWithParams:(FBApplication *)application
-{
-  NSDictionary *info = [self.class JSONTreeForTargetForApplication:application];
-  return FBResponseWithStatus(FBCommandStatusNoError, @{ @"tree": info });
-}
-
-+ (NSDictionary *)JSONTreeForTargetForApplication:(FBApplication *)app
-{
-  NSDictionary *info = [self infoForElement:app.lastSnapshot];
-  return info;
-}
-
-+ (NSDictionary *)infoForElement:(XCElementSnapshot *)snapshot
-{
-  NSMutableDictionary *info = [[NSMutableDictionary alloc] init];
-  info[@"type"] = [FBElementTypeTransformer shortStringWithElementType:snapshot.elementType];
-  info[@"rawIdentifier"] = FBValueOrNull([snapshot.identifier isEqual:@""] ? nil : snapshot.identifier);
-  info[@"name"] = FBValueOrNull(snapshot.wdName);
-  info[@"value"] = FBValueOrNull(snapshot.wdValue);
-  info[@"label"] = FBValueOrNull(snapshot.wdLabel);
-  info[@"rect"] = snapshot.wdRect;
-  info[@"frame"] = NSStringFromCGRect(snapshot.wdFrame);
-  info[@"isEnabled"] = [@([snapshot isWDEnabled]) stringValue];
-  info[@"isVisible"] = [@([snapshot isWDVisible]) stringValue];
-
-  NSArray *childElements = snapshot.children;
-  if ([childElements count]) {
-    info[@"children"] = [[NSMutableArray alloc] init];
-    for (XCElementSnapshot *childSnapshot in childElements) {
-      [info[@"children"] addObject:[self infoForElement:childSnapshot]];
-    }
-  }
-  return info;
+  const BOOL accessibleTreeType = [request.arguments[@"accessible"] boolValue];
+  return FBResponseWithStatus(FBCommandStatusNoError, @{ @"tree": (accessibleTreeType ? application.fb_accessibilityTree : application.fb_tree) });
 }
 
 @end

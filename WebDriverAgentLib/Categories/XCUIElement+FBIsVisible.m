@@ -10,11 +10,15 @@
 #import "XCUIElement+FBIsVisible.h"
 
 #import "XCElementSnapshot+Helpers.h"
+#import "XCTestPrivateSymbols.h"
 
 @implementation XCUIElement (FBIsVisible)
 
 - (BOOL)fb_isVisible
 {
+  if (!self.lastSnapshot) {
+    [self resolve];
+  }
   return self.lastSnapshot.fb_isVisible;
 }
 

@@ -19,9 +19,10 @@
 #import "FBRuntimeUtils.h"
 #import "FBSession.h"
 #import "FBUnknownCommands.h"
-#import "FBWDAConstants.h"
-#import "FBWDALogger.h"
-#import "UIDevice+Wifi_IP.h"
+#import "FBConfiguration.h"
+#import "FBLogger.h"
+
+#import "XCUIDevice+FBHelpers.h"
 
 static NSString *const FBServerURLBeginMarker = @"ServerURLHere->";
 static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
@@ -33,7 +34,7 @@ static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
 
 - (void)handleResourceNotFound
 {
-  [FBWDALogger logFmt:@"Received request for %@ which we do not handle", self.requestURI];
+  [FBLogger logFmt:@"Received request for %@ which we do not handle", self.requestURI];
   [super handleResourceNotFound];
 }
 
@@ -71,7 +72,7 @@ static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
   [self registerRouteHandlers:[self.class collectCommandHandlerClasses]];
   [self registerServerKeyRouteHandlers];
 
-  NSRange serverPortRange = FBWDAConstants.bindingPortRange;
+  NSRange serverPortRange = FBConfiguration.bindingPortRange;
   NSError *error;
   BOOL serverStarted = NO;
 
@@ -84,14 +85,14 @@ static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
       break;
     }
 
-    [FBWDALogger logFmt:@"Failed to start web server on port %ld with error %@", (long)port, [error description]];
+    [FBLogger logFmt:@"Failed to start web server on port %ld with error %@", (long)port, [error description]];
   }
 
   if (!serverStarted) {
-    [FBWDALogger logFmt:@"Last attempt to start web server failed with error %@", [error description]];
+    [FBLogger logFmt:@"Last attempt to start web server failed with error %@", [error description]];
     abort();
   }
-  [FBWDALogger logFmt:@"%@http://%@:%d%@", FBServerURLBeginMarker, [UIDevice currentDevice].fb_wifiIPAddress, [self.server port], FBServerURLEndMarker];
+  [FBLogger logFmt:@"%@http://%@:%d%@", FBServerURLBeginMarker, [XCUIDevice sharedDevice].fb_wifiIPAddress, [self.server port], FBServerURLEndMarker];
 }
 
 - (BOOL)attemptToStartServer:(RoutingHTTPServer *)server onPort:(NSInteger)port withError:(NSError **)error
@@ -128,7 +129,7 @@ static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
           parameters:request.params
           arguments:[NSJSONSerialization JSONObjectWithData:request.body options:NSJSONReadingMutableContainers error:NULL]];
 
-        [FBWDALogger verboseLog:routeParams.description];
+        [FBLogger verboseLog:routeParams.description];
 
         @try {
           [route mountRequest:routeParams intoResponse:response];
@@ -139,11 +140,6 @@ static NSString *const FBServerURLEndMarker = @"<-ServerURLHere";
       }];
     }
   }
-}
-
-- (void)handleAppDeadlockDetection
-{
-  [[NSException exceptionWithName:FBApplicationDeadlockDetectedException reason:@"Can't communicate with deadlocked application" userInfo:nil] raise];
 }
 
 - (void)handleException:(NSException *)exception forResponse:(RouteResponse *)response

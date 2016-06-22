@@ -11,7 +11,6 @@
 
 @class XCUIApplicationProcess;
 
-
 /**
  Proxy that would forward all calls to it's applicationProcess.
  However it will block call to waitForQuiescence if shouldWaitForQuiescence is set to NO
@@ -19,7 +18,7 @@
 @interface FBApplicationProcessProxy : NSObject
 
 /**
- Convenience initialazer
+ Convenience initializer
  */
 + (instancetype)proxyWithApplicationProcess:(XCUIApplicationProcess *)applicationProcess;
 

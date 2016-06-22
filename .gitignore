@@ -35,15 +35,15 @@ xcuserdata
 #
 # Pods/
 
-# Carthage
-#
-# Add this line if you want to avoid checking in source code from Carthage dependencies.
+# AppCode
+.idea/
 
+# Carthage
 Carthage/Build
 Carthage/Checkouts
-UIAWebDriverAgent/Carthage/Build
-UIAWebDriverAgent/Carthage/Checkouts
 
 # Resource bundle recreated on each build
 Resources/WebDriverAgent.bundle
-UIAWebDriverAgent/Resources/WebDriverAgent.bundle
+
+# Modules map recreated on each build
+Modules/module.modulemap

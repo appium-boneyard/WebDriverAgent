@@ -1,5 +1,3 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
-
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
  * All rights reserved.
@@ -11,9 +9,10 @@
 
 #import "FBRuntimeUtils.h"
 
+#include <dlfcn.h>
 #import <objc/runtime.h>
 
-NSArray *FBClassesThatConformsToProtocol(Protocol *protocol)
+NSArray<Class> *FBClassesThatConformsToProtocol(Protocol *protocol)
 {
   Class *classes = NULL;
   NSMutableArray *collection = [NSMutableArray array];
@@ -32,4 +31,13 @@ NSArray *FBClassesThatConformsToProtocol(Protocol *protocol)
   }
   free(classes);
   return collection.copy;
+}
+
+void *FBRetrieveSymbolFromBinary(const char *binary, const char *name)
+{
+  void *handle = dlopen(binary, RTLD_LAZY);
+  NSCAssert(handle, @"%s could not be opened", binary);
+  void *pointer = dlsym(handle, name);
+  NSCAssert(pointer, @"%s could not be located", name);
+  return pointer;
 }
