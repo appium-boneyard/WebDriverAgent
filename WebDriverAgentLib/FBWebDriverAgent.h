@@ -11,8 +11,9 @@
 
 @interface FBWebDriverAgent : NSObject
 
+/**
+ Starts WebDriverAgent service by booting HTTP and USB server
+ */
 - (void)start;
-
-- (void)handleTestFailureWithDescription:(NSString *)failureDescription;
 
 @end

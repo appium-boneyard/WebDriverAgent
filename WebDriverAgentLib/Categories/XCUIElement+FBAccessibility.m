@@ -1,5 +1,3 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
-
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
  * All rights reserved.
@@ -12,11 +10,15 @@
 #import "XCUIElement+FBAccessibility.h"
 
 #import "XCElementSnapshot+Helpers.h"
+#import "XCTestPrivateSymbols.h"
 
 @implementation XCUIElement (FBAccessibility)
 
 - (BOOL)fb_isAccessibilityElement
 {
+  if (!self.lastSnapshot) {
+    [self resolve];
+  }
   return self.lastSnapshot.fb_isAccessibilityElement;
 }
 

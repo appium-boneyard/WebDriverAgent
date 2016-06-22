@@ -38,19 +38,21 @@
   NSDictionary *requirements = request.arguments[@"desiredCapabilities"];
   NSString *bundleID = requirements[@"bundleId"];
   NSString *appPath = requirements[@"app"];
-  NSAssert(bundleID, @"'bundleId' desired capability not provided");
+  if (!bundleID) {
+    return FBResponseWithErrorFormat(@"'bundleId' desired capability not provided");
+  }
   FBApplication *app = [[FBApplication alloc] initPrivateWithPath:appPath bundleID:bundleID];
   app.fb_shouldWaitForQuiescence = [requirements[@"shouldWaitForQuiescence"] boolValue];
   app.launchArguments = (NSArray<NSString *> *)requirements[@"arguments"] ?: @[];
   app.launchEnvironment = (NSDictionary <NSString *, NSString *> *)requirements[@"environment"] ?: @{};
   [app launch];
   [FBSession sessionWithApplication:app];
-  return [FBResponsePayload okWith:FBSessionCommands.sessionInformation];
+  return FBResponseWithObject(FBSessionCommands.sessionInformation);
 }
 
 + (id<FBResponsePayload>)handleGetActiveSession:(FBRouteRequest *)request
 {
-  return [FBResponsePayload okWith:FBSessionCommands.sessionInformation];
+  return FBResponseWithObject(FBSessionCommands.sessionInformation);
 }
 
 + (id<FBResponsePayload>)handleGetStatus:(FBRouteRequest *)request

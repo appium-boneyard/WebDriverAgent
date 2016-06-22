@@ -13,9 +13,11 @@
 #import "FBApplication.h"
 #import "FBErrorBuilder.h"
 #import "FBRunLoopSpinner.h"
-
+#import "FBMacros.h"
+#import "XCElementSnapshot.h"
 #import "XCUIElement+Utilities.h"
 #import "XCTestDriver.h"
+
 
 @implementation FBKeyboard
 
@@ -57,21 +59,6 @@
       withDescription:@"Timeout waiting for keybord to stop animating"]
      buildError:error];
   }
-  return YES;
-}
-
-+ (BOOL)hideWithError:(NSError **)error
-{
-  XCUIElement *element = [[FBApplication fb_activeApplication].windows elementBoundByIndex:0];
-  XCUIElementQuery *allElements = [element descendantsMatchingType:XCUIElementTypeAny];
-  XCUIElement *activeElement = [allElements elementMatchingPredicate:[NSPredicate predicateWithFormat:@"hasKeyboardFocus == YES"]];
-  if (!activeElement.exists) {
-    return
-    [[[FBErrorBuilder builder]
-      withDescription:@"There is no element with keyboard focus"]
-     buildError:error];
-  }
-  [element tap];
   return YES;
 }
 

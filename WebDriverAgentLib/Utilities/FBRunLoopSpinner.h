@@ -16,6 +16,7 @@ typedef id (^FBRunLoopSpinnerObjectBlock)();
 
 /**
  Dispatches block and spins the run loop until `completion` block is called.
+
  @param block the block to wait for to finish.
  */
 + (void)spinUntilCompletion:(void (^)(void(^completion)()))block;
@@ -24,20 +25,29 @@ typedef id (^FBRunLoopSpinnerObjectBlock)();
  Updates the error message to print in the event of a timeout.
 
  @param timeoutErrorMessage the Error Message to print.
- @return the reciever, for chaining.
+ @return the receiver, for chaining.
  */
 - (instancetype)timeoutErrorMessage:(NSString *)timeoutErrorMessage;
 
 /**
- Updates the timeout of the reciever.
+ Updates the timeout of the receiver.
 
  @param timeout the amount of time to wait before timing out.
- @return the reciever, for chaining.
+ @return the receiver, for chaining.
  */
 - (instancetype)timeout:(NSTimeInterval)timeout;
 
 /**
+ Updates the interval of the receiver.
+
+ @param interval the amount of time to wait before checking condition again.
+ @return the receiver, for chaining.
+ */
+- (instancetype)interval:(NSTimeInterval)interval;
+
+/**
  Spins the Run Loop until `untilTrue` returns YES or a timeout is reached.
+
  @param untilTrue the condition to meet.
  @return YES if the condition was met, NO if the timeout was reached first.
  */
@@ -45,6 +55,7 @@ typedef id (^FBRunLoopSpinnerObjectBlock)();
 
 /**
  Spins the Run Loop until `untilTrue` returns YES or a timeout is reached.
+
  @param untilTrue the condition to meet.
  @param error to fill in case of timeout.
  @return YES if the condition was met, NO if the timeout was reached first.
@@ -53,6 +64,7 @@ typedef id (^FBRunLoopSpinnerObjectBlock)();
 
 /**
  Spins the Run Loop until `untilNotNil` returns non nil value or a timeout is reached.
+
  @param untilNotNil the condition to meet.
  @param error to fill in case of timeout.
  @return YES if the condition was met, NO if the timeout was reached first.

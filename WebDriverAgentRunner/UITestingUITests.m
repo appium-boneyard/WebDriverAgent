@@ -9,17 +9,13 @@
 
 #import <XCTest/XCTest.h>
 
-#import <WebDriverAgentLib/FBWDALogger.h>
+#import <WebDriverAgentLib/FBDebugLogDelegateDecorator.h>
+#import <WebDriverAgentLib/FBConfiguration.h>
+#import <WebDriverAgentLib/FBFailureProofTestCase.h>
 #import <WebDriverAgentLib/FBWebDriverAgent.h>
 #import <WebDriverAgentLib/XCTestCase.h>
 
-#import "FBDebugLogDelegateDecorator.h"
-#import "FBXCTestCaseImplementationFailureHoldingProxy.h"
-
-// This magic method removes duplicated hidden cell views. (Possibly used for cell reuse)
-BOOL _AXSAutomationSetFauxCollectionViewCellsEnabled(BOOL);
-
-@interface UITestingUITests : XCTestCase
+@interface UITestingUITests : FBFailureProofTestCase
 @property (nonatomic, strong) FBWebDriverAgent *agent;
 @end
 
@@ -31,24 +27,13 @@ BOOL _AXSAutomationSetFauxCollectionViewCellsEnabled(BOOL);
   [super setUp];
 }
 
-- (void)setUp
-{
-  [super setUp];
-  self.continueAfterFailure = YES;
-  _AXSAutomationSetFauxCollectionViewCellsEnabled(YES);
-  self.agent = [FBWebDriverAgent new];
-}
-
+/**
+ Never ending test used to start WebDriverAgent
+ */
 - (void)testRunner
 {
-  self.internalImplementation = (_XCTestCaseImplementation *)[FBXCTestCaseImplementationFailureHoldingProxy proxyWithXCTestCaseImplementation:self.internalImplementation];
-  [self.agent start];
-}
-
-- (void)_enqueueFailureWithDescription:(NSString *)description inFile:(NSString *)filePath atLine:(NSUInteger)lineNumber expected:(BOOL)expected
-{
-  [FBWDALogger logFmt:@"Enqueue Failure: %@ %@ %lu %d", description, filePath, (unsigned long)lineNumber, expected];
-  [self.agent handleTestFailureWithDescription:description];
+  [FBConfiguration shouldShowFakeCollectionViewCells:YES];
+  [[FBWebDriverAgent new] start];
 }
 
 @end

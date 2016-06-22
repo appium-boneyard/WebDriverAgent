@@ -10,16 +10,16 @@
 #import "FBOrientationCommands.h"
 
 #import "FBRouteRequest.h"
-#import "FBWDAMacros.h"
+#import "FBMacros.h"
 #import "FBSession.h"
 #import "FBApplication.h"
 #import "XCUIDevice.h"
 
 extern const struct FBWDOrientationValues {
-  FBWDALiteralString portrait;
-  FBWDALiteralString landscapeLeft;
-  FBWDALiteralString landscapeRight;
-  FBWDALiteralString portraitUpsideDown;
+  FBLiteralString portrait;
+  FBLiteralString landscapeLeft;
+  FBLiteralString landscapeRight;
+  FBLiteralString portraitUpsideDown;
 } FBWDOrientationValues;
 
 const struct FBWDOrientationValues FBWDOrientationValues = {
@@ -103,11 +103,11 @@ const NSTimeInterval kFBWebDriverOrientationChangeDelay = 5.0;
   dispatch_once(&onceToken, ^{
     orientationMap =
     @{
-      FBWDOrientationValues.portrait : @1,
-      FBWDOrientationValues.portraitUpsideDown : @2,
-      FBWDOrientationValues.landscapeLeft : @3,
-      FBWDOrientationValues.landscapeRight : @4,
-      };
+      FBWDOrientationValues.portrait : @(UIDeviceOrientationPortrait),
+      FBWDOrientationValues.portraitUpsideDown : @(UIDeviceOrientationPortraitUpsideDown),
+      FBWDOrientationValues.landscapeLeft : @(UIDeviceOrientationLandscapeLeft),
+      FBWDOrientationValues.landscapeRight : @(UIDeviceOrientationLandscapeRight),
+    };
   });
   return orientationMap;
 }

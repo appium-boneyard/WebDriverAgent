@@ -9,41 +9,67 @@
 
 #import <Foundation/Foundation.h>
 
-#import "FBCommandStatus.h"
+#import <WebDriverAgentLib/FBCommandStatus.h>
 
 @class FBElementCache;
 @class RouteResponse;
 @class XCUIElement;
+@protocol FBResponsePayload;
 
+/**
+ Returns 'FBCommandStatusNoError' response payload
+ */
+id<FBResponsePayload> FBResponseWithOK(void);
+
+/**
+ Returns 'FBCommandStatusNoError' response payload with given 'object'
+ */
+id<FBResponsePayload> FBResponseWithObject(id object);
+
+/**
+ Returns 'FBCommandStatusNoError' response payload with given 'element', which will be also cached in 'elementCache'
+ */
+id<FBResponsePayload> FBResponseWithCachedElement(XCUIElement *element, FBElementCache *elementCache);
+
+/**
+ Returns 'FBCommandStatusNoError' response payload with given array of 'elements', which will be also cached in 'elementCache'
+ */
+id<FBResponsePayload> FBResponseWithCachedElements(NSArray<XCUIElement *> *elements, FBElementCache *elementCache);
+
+/**
+ Returns 'FBCommandStatusNoError' response payload with given elementUUID
+ */
+id<FBResponsePayload> FBResponseWithElementUUID(NSString *elementUUID);
+
+/**
+ Returns 'FBCommandStatusUnhandled' response payload with given error's description
+ */
+id<FBResponsePayload> FBResponseWithError(NSError *error);
+
+/**
+ Returns 'FBCommandStatusUnhandled' response payload with given error message
+ */
+id<FBResponsePayload> FBResponseWithErrorFormat(NSString *errorFormat, ...) NS_FORMAT_FUNCTION(1,2);
+
+/**
+ Returns 'status' response payload with given object
+ */
+id<FBResponsePayload> FBResponseWithStatus(FBCommandStatus status, id object);
+
+/**
+ Returns 'FBCommandStatusNoError' response payload with content of a file at given 'path'
+ */
+id<FBResponsePayload> FBResponseFileWithPath(NSString *path);
+
+
+/**
+ Protocol for objects that can dispatch some kind of a payload for given 'response'
+ */
 @protocol FBResponsePayload <NSObject>
 
+/**
+ Dispatch constructed payload into given response
+ */
 - (void)dispatchWithResponse:(RouteResponse *)response;
 
 @end
-
-id<FBResponsePayload> FBResponseWithOK(void);
-id<FBResponsePayload> FBResponseWithCachedElement(XCUIElement *element, FBElementCache *elementCache);
-id<FBResponsePayload> FBResponseWithCachedElements(NSArray<XCUIElement *> *elements, FBElementCache *elementCache);
-id<FBResponsePayload> FBResponseWithElementID(NSUInteger elementID);
-id<FBResponsePayload> FBResponseWithError(NSError *error);
-id<FBResponsePayload> FBResponseWithErrorFormat(NSString *errorFormat, ...) NS_FORMAT_FUNCTION(1,2);
-id<FBResponsePayload> FBResponseWithStatus(FBCommandStatus status, id object);
-id<FBResponsePayload> FBResponseFileWithPath(NSString *path);
-
-/**
- Factory for constructing payloads
- */
-@interface FBResponsePayload : NSObject
-
-+ (id<FBResponsePayload>)ok;
-+ (id<FBResponsePayload>)okWith:(id)object;
-+ (id<FBResponsePayload>)withElementID:(NSUInteger)elementID;
-+ (id<FBResponsePayload>)withError:(NSError *)error;
-+ (id<FBResponsePayload>)withErrorFormat:(NSString *)errorFormat, ... NS_FORMAT_FUNCTION(1,2);
-+ (id<FBResponsePayload>)withErrorFormat:(NSString *)format arguments:(va_list)argList NS_FORMAT_FUNCTION(1,0);
-+ (id<FBResponsePayload>)withStatus:(FBCommandStatus)status;
-+ (id<FBResponsePayload>)withStatus:(FBCommandStatus)status object:(id)object;
-+ (id<FBResponsePayload>)withFileAtPath:(NSString *)path;
-
-@end
-

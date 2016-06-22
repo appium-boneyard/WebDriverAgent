@@ -9,14 +9,12 @@
 
 #import "FBElementCache.h"
 
-#import <WebDriverAgentLib/FBAlertViewCommands.h>
-
+#import "FBAlert.h"
 #import "XCUIElement.h"
+#import "XCUIElement+Utilities.h"
 
-@class UIAElement;
 
 @interface FBElementCache ()
-@property (atomic, assign) NSUInteger currentElementIndex;
 @property (atomic, strong) NSMutableDictionary *elementCache;
 @end
 
@@ -28,26 +26,28 @@
   if (!self) {
     return nil;
   }
-  _currentElementIndex = 3;
   _elementCache = [[NSMutableDictionary alloc] init];
   return self;
 }
 
-- (NSUInteger)storeElement:(XCUIElement *)element
+- (NSString *)storeElement:(XCUIElement *)element
 {
-  self.currentElementIndex++;
-  self.elementCache[@(self.currentElementIndex)] = element;
-  return self.currentElementIndex;
+  NSString *uuid = [[NSUUID UUID] UUIDString];
+  self.elementCache[uuid] = element;
+  return uuid;
 }
 
-- (XCUIElement *)elementForIndex:(NSUInteger)index
+- (XCUIElement *)elementForUUID:(NSString *)uuid
 {
-  XCUIElement *element = self.elementCache[@(index)];
-  [FBAlertViewCommands ensureElementIsNotObstructedByAlertView:element];
+  if (!uuid) {
+    return nil;
+  }
+  XCUIElement *element = self.elementCache[uuid];
   [element resolve];
+  if (element.fb_isObstructedByAlert) {
+    [FBAlert throwRequestedItemObstructedByAlertException];
+  }
   return element;
 }
-
-
 
 @end
